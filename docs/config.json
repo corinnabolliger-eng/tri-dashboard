@@ -11,7 +11,7 @@
     "Thu": ["strength:leg","swim:technique"],
     "Fri": ["Bike:Z2"],
     "Sat": ["strength:fullbody"],
-    "Sun": ["swim: long swim", run:easy]
+    "Sun": ["swim: long swim", "run:easy"]
   },
   "heart_rate_zone_names": ["Z1 Recovery", "Z2 Endurance", "Z3 Tempo", "Z4 Threshold", "Z5 VO2max"]
 }
