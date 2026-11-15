@@ -161,7 +161,9 @@ def map_activity(a: dict) -> dict:
         "type": type_key,
         "sport": sport_of(type_key),
         "dist_m": num(a.get("distance"), 1),
-        "dur_s": num(a.get("movingDuration") or a.get("duration"), 0),
+        # moving time for endurance sports; full time for strength etc. (moving time skips rests)
+        "dur_s": num((a.get("movingDuration") if sport_of(type_key) in ("swim", "bike", "run") else None)
+                     or a.get("duration"), 0),
         "elapsed_s": num(a.get("duration"), 0),
         "avg_hr": num(a.get("averageHR"), 0),
         "max_hr": num(a.get("maxHR"), 0),
