@@ -142,6 +142,8 @@ def sport_of(type_key: str) -> str:
         return "bike"
     if "run" in t:
         return "run"
+    if any(k in t for k in ("strength", "weight", "hiit")):
+        return "strength"
     if t in ("multi_sport", "triathlon", "duathlon") or "multisport" in t:
         return "multi"
     return "other"
@@ -174,6 +176,8 @@ def map_activity(a: dict) -> dict:
         "elev": num(a.get("elevationGain"), 0),
         "cal": num(a.get("calories"), 0),
         "pool_m": num(a.get("poolLength"), 0),
+        "sets": num(a.get("activeSets") or a.get("totalSets"), 0),
+        "reps": num(a.get("totalReps"), 0),
     }
 
 
