@@ -1,9 +1,8 @@
 {
   "title": "Triathlon Training",
   "races": [
-    { "name": "Season opener (sprint)", "date": "2027-05-16", "priority": "B" },
-    { "name": "A-race (70.3)", "date": "2027-06-27", "priority": "A" }
+    { "name": "Ironman", "date": "2027-07-04", "priority": "A" }
   ],
-  "weekly_targets_hours": { "swim": 2.5, "bike": 5, "run": 3 },
+  "weekly_targets_hours": { "swim": 3, "bike": 7, "run": 4.5, "strength": 1 },
   "heart_rate_zone_names": ["Z1 Recovery", "Z2 Endurance", "Z3 Tempo", "Z4 Threshold", "Z5 VO2max"]
 }

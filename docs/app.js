@@ -5,8 +5,10 @@ const SPORTS = [
   { key: "swim", name: "Swim", color: "var(--swim)" },
   { key: "bike", name: "Bike", color: "var(--bike)" },
   { key: "run", name: "Run", color: "var(--run)" },
-  { key: "other", name: "Other", color: "var(--other)" },
+  { key: "strength", name: "Strength", color: "var(--strength)" },
+  { key: "other", name: "Outdoor & other", color: "var(--other)" },
 ];
+const DISCIPLINES = ["swim", "bike", "run", "strength"];
 const SPORT = Object.fromEntries(SPORTS.map((s) => [s.key, s]));
 const ZONE_COLORS = ["var(--z1)", "var(--z2)", "var(--z3)", "var(--z4)", "var(--z5)"];
 const PW_KEY = "tri-dashboard-pw";
@@ -58,6 +60,7 @@ const paceSwim = (mps) => (mps ? 100 / mps : null);  // sec per 100 m
 function intensityText(a) {
   if (a.sport === "run" && a.avg_speed) return `${fmtClock(paceRun(a.avg_speed))} /km`;
   if (a.sport === "swim" && a.avg_speed) return `${fmtClock(paceSwim(a.avg_speed))} /100m`;
+  if (a.sport === "strength" && a.sets) return `${a.sets} sets${a.reps ? ` · ${a.reps} reps` : ""}`;
   if (a.sport === "bike") {
     if (a.np || a.avg_power) return `${Math.round(a.np || a.avg_power)} W${a.np ? " NP" : ""}`;
     if (a.avg_speed) return `${(a.avg_speed * 3.6).toFixed(1)} km/h`;
@@ -169,11 +172,20 @@ function actLoad(a) {
   if (a.load != null) return a.load;
   if (a.tss != null) return a.tss;
   const h = (a.dur_s || 0) / 3600;
-  return h * (a.sport === "other" ? 30 : 55); // rough fallback when Garmin gives no load
+  return h * (a.sport === "other" || a.sport === "strength" ? 30 : 55); // rough fallback when Garmin gives no load
+}
+
+function isStrength(type) {
+  const t = (type || "").toLowerCase();
+  return t.includes("strength") || t.includes("weight") || t.includes("hiit");
 }
 
 function buildModel(data) {
-  const acts = (data.activities || []).map((a) => ({ ...a, sport: a.sport === "multi" ? "other" : a.sport, L: actLoad(a) }));
+  const acts = (data.activities || []).map((a) => {
+    let sport = a.sport === "multi" ? "other" : a.sport;
+    if (sport === "other" && isStrength(a.type)) sport = "strength"; // older data stored strength as "other"
+    return { ...a, sport, L: actLoad({ ...a, sport }) };
+  });
   const health = data.health || {};
 
   // daily load → CTL / ATL / TSB
@@ -200,6 +212,7 @@ function buildModel(data) {
     if (!w) return;
     const s = w[a.sport] || w.other;
     s.h += (a.dur_s || 0) / 3600; s.dist += a.dist_m || 0; s.n += 1; s.load += a.L;
+    s.sets += a.sets || 0; s.reps += a.reps || 0;
     if (a.avg_speed && a.dur_s && a.dist_m) { s.speedT += a.dur_s; s.speedD += a.dist_m; }
     const p = a.np || a.avg_power;
     if (p && a.dur_s) { s.powT += a.dur_s; s.powW += p * a.dur_s; }
@@ -209,13 +222,15 @@ function buildModel(data) {
 }
 function emptyWeek() {
   const o = {};
-  SPORTS.forEach((s) => (o[s.key] = { h: 0, dist: 0, n: 0, load: 0, speedT: 0, speedD: 0, powT: 0, powW: 0 }));
+  SPORTS.forEach((s) => (o[s.key] = { h: 0, dist: 0, n: 0, load: 0, sets: 0, reps: 0, speedT: 0, speedD: 0, powT: 0, powW: 0 }));
   return o;
 }
 
 /* ------------------------------------------------------------------ render */
 function renderAll() {
   renderKPIs();
+  if (typeof renderPlan === "function") { if (!renderAll.planInit) { initPlanTabs(); renderAll.planInit = true; } renderPlan(); }
+  renderOther();
   renderSports();
   renderZones();
   renderRaces();
@@ -224,6 +239,7 @@ function renderAll() {
 }
 function renderCharts() {
   renderPMC();
+  renderOtherChart();
   renderVolume();
   renderSparks();
   renderRecovery();
@@ -267,7 +283,7 @@ function renderKPIs() {
   const w = M.wk[M.thisWeek];
   const hrsWeek = SPORTS.reduce((s, x) => s + w[x.key].h, 0);
   const targets = CONFIG.weekly_targets_hours || {};
-  const tgt = ["swim", "bike", "run"].reduce((s, k) => s + (targets[k] || 0), 0);
+  const tgt = DISCIPLINES.reduce((s, k) => s + (targets[k] || 0), 0);
 
   const hrv = lastHealth("hrv");
   let hrvPill = null, hrvSub = "no data";
@@ -327,7 +343,7 @@ function renderVolume() {
     return o;
   });
   const targets = CONFIG.weekly_targets_hours || {};
-  const tgt = ["swim", "bike", "run"].reduce((s, k) => s + (targets[k] || 0), 0);
+  const tgt = DISCIPLINES.reduce((s, k) => s + (targets[k] || 0), 0);
   const last4 = M.weeks.slice(-5, -1).map((w) => SPORTS.reduce((s, k) => s + M.wk[w][k.key].h, 0));
   const avg4 = last4.reduce((a, b) => a + b, 0) / (last4.length || 1);
   document.getElementById("vol-sub").textContent =
@@ -348,7 +364,7 @@ function renderVolume() {
 /* ---------- sport cards */
 function renderSports() {
   const targets = CONFIG.weekly_targets_hours || {};
-  const html = ["swim", "bike", "run"].map((k) => {
+  const html = DISCIPLINES.map((k) => {
     const s = SPORT[k];
     const w = M.wk[M.thisWeek][k];
     const prev = M.weeks.slice(-5, -1).map((x) => M.wk[x][k]);
@@ -356,6 +372,7 @@ function renderSports() {
     const avgD = prev.reduce((a, b) => a + b.dist, 0) / 4;
     const t = targets[k];
     const pct = t ? Math.min(100, (w.h / t) * 100) : 0;
+    if (k === "strength") return strengthCard(s, w, prev, t, pct);
     const sparkTitle = k === "run" ? "Avg pace per week · higher = faster" : k === "swim" ? "Avg pace /100m per week · higher = faster"
       : hasPower() ? "Avg power per week (W)" : "Avg speed per week (km/h)";
     return `<div class="card sport">
@@ -374,14 +391,43 @@ function renderSports() {
   });
   document.getElementById("sports").innerHTML = html.join("");
 }
+function strengthCard(s, w, prev, t, pct) {
+  const avgH = prev.reduce((a, b) => a + b.h, 0) / 4;
+  const avgN = prev.reduce((a, b) => a + b.n, 0) / 4;
+  const third = w.sets
+    ? `<div><div class="v">${w.sets}</div><div class="k">sets${w.reps ? ` · ${w.reps} reps` : ""}</div></div>`
+    : `<div><div class="v">${w.n ? fmtHM((w.h * 3600) / w.n) : "–"}</div><div class="k">avg session</div></div>`;
+  return `<div class="card sport">
+    <h2><span class="dot" style="background:${s.color}"></span>${s.name}</h2>
+    <div class="stats">
+      <div><div class="v">${fmtHM(w.h * 3600)}</div><div class="k">this week</div></div>
+      <div><div class="v">${w.n}</div><div class="k">sessions</div></div>
+      ${third}
+    </div>
+    ${t ? `<div class="target"><div class="t"><span>Target ${t} h</span><span>${Math.round((w.h / t) * 100)}%</span></div>
+      <div class="bar"><span style="width:${pct}%;background:${s.color}"></span></div></div>` : ""}
+    <p class="muted">4-week avg: ${avgH.toFixed(1)} h · ${avgN.toFixed(1)} sessions per week</p>
+    <p class="muted" style="margin-top:10px">Minutes per week</p>
+    <div class="chart spark" id="spark-strength"></div>
+  </div>`;
+}
 function hasPower() { return M.acts.some((a) => a.sport === "bike" && (a.np || a.avg_power)); }
 
 function renderSparks() {
   const weeks = M.weeks.slice(-12);
-  ["swim", "bike", "run"].forEach((k) => {
+  DISCIPLINES.forEach((k) => {
     const el = document.getElementById(`spark-${k}`);
     if (!el) return;
     let vals, fmt, invert = false;
+    if (k === "strength") {
+      stackedBars(el, {
+        labels: weeks, keys: [SPORT.strength], compact: true, xFmt: fmtDay, unit: "",
+        rows: weeks.map((w) => ({ label: w, strength: Math.round(M.wk[w].strength.h * 60) })),
+        yFmt: (v) => `${Math.round(v)}`, tipTitle: (d) => `Week of ${fmtDay(d)}`,
+        extraTip: (i) => [["Sessions", M.wk[weeks[i]].strength.n]],
+      });
+      return;
+    }
     if (k === "run") {
       vals = weeks.map((w) => { const s = M.wk[w].run; return s.speedD ? s.speedT / (s.speedD / 1000) : null; });
       fmt = (v) => fmtClock(v); invert = true;
@@ -400,6 +446,82 @@ function renderSparks() {
       dates: weeks, series: [{ name: SPORT[k].name, color: SPORT[k].color, values: vals, dots: true }],
       yFmt: fmt, invert, compact: true, tipTitle: (d) => `Week of ${fmtDay(d)}`, xFmt: fmtDay,
     });
+  });
+}
+
+/* ---------- outdoor & other */
+const TYPE_NAMES = [
+  [/backcountry|ski_tour|skitour/, "Ski touring"], [/resort_ski|downhill|snowboard/, "Alpine skiing"],
+  [/cross_country_ski|skate_ski|classic_ski/, "Cross-country skiing"], [/hik/, "Hiking"], [/mountaineer/, "Mountaineering"],
+  [/climb|boulder/, "Climbing"], [/walk/, "Walking"], [/yoga|pilates/, "Yoga & pilates"], [/paddl|kayak|row/, "Paddling & rowing"],
+  [/multi_sport|triathlon|duathlon/, "Multisport / races"], [/snowshoe/, "Snowshoeing"], [/inline|skat/, "Skating"],
+];
+function typeName(t) {
+  t = (t || "").toLowerCase();
+  for (const [re, n] of TYPE_NAMES) if (re.test(t)) return n;
+  const s = t.replace(/_ws$|_v2$/, "").replace(/_/g, " ").trim();
+  return s ? s[0].toUpperCase() + s.slice(1) : "Other";
+}
+function renderOther() {
+  const el = document.getElementById("other");
+  if (!el) return;
+  const others = M.acts.filter((a) => a.sport === "other");
+  const w = M.wk[M.thisWeek].other;
+  const weekActs = others.filter((a) => a.date >= M.thisWeek);
+  const elevWeek = weekActs.reduce((s, a) => s + (a.elev || 0), 0);
+  const since = addDays(TODAY, -83);
+  const recent = others.filter((a) => a.date >= since);
+  const byType = {};
+  recent.forEach((a) => {
+    const n = typeName(a.type);
+    const t = (byType[n] = byType[n] || { h: 0, n: 0, elev: 0, dist: 0 });
+    t.h += (a.dur_s || 0) / 3600; t.n++; t.elev += a.elev || 0; t.dist += a.dist_m || 0;
+  });
+  const types = Object.entries(byType).sort((a, b) => b[1].h - a[1].h);
+  const maxH = types.length ? types[0][1].h : 1;
+  const totH = recent.reduce((s, a) => s + (a.dur_s || 0) / 3600, 0);
+  const totElev = recent.reduce((s, a) => s + (a.elev || 0), 0);
+  const last = others.slice(-1)[0];
+  el.innerHTML = `
+    <div class="other-grid">
+      <div>
+        <div class="stats">
+          <div><div class="v">${fmtHM(w.h * 3600)}</div><div class="k">this week</div></div>
+          <div><div class="v">${w.n}</div><div class="k">sessions</div></div>
+          <div><div class="v">${Math.round(elevWeek).toLocaleString()} m</div><div class="k">elevation ↑</div></div>
+        </div>
+        <p class="muted">Last 12 weeks: ${fmtHM(totH * 3600)} · ${recent.length} sessions · ${Math.round(totElev).toLocaleString()} m elevation gain</p>
+        ${last ? `<p class="muted">Latest: ${esc(last.name)} (${typeName(last.type)}), ${fmtDayLong(last.date)}, ${fmtHM(last.dur_s)}${last.elev ? `, ${Math.round(last.elev)} m ↑` : ""}</p>` : ""}
+        <p class="muted" style="margin-top:10px">Hours per week</p>
+        <div class="chart spark" id="spark-other"></div>
+      </div>
+      <div>
+        <p class="muted" style="margin:0 0 8px">By activity, last 12 weeks</p>
+        ${types.length ? types.map(([n, t]) => `
+          <div class="trow" data-tip="${esc(n)}|${t.n}|${fmtHM(t.h * 3600)}|${Math.round(t.elev)}|${fmtDist(t.dist)}">
+            <div class="tn">${esc(n)}</div>
+            <div class="tb"><span style="width:${Math.max(2, (t.h / maxH) * 100)}%"></span></div>
+            <div class="tv">${fmtHM(t.h * 3600)} · ${t.n}×${t.elev >= 50 ? ` · ${Math.round(t.elev).toLocaleString()} m ↑` : ""}</div>
+          </div>`).join("") : `<div class="nodata">No other activities in the last 12 weeks</div>`}
+      </div>
+    </div>`;
+  el.querySelectorAll("[data-tip]").forEach((r) => {
+    r.addEventListener("mousemove", (e) => {
+      const [n, c, h, el2, d] = r.dataset.tip.split("|");
+      showTip(e.clientX, e.clientY, `<b>${n}</b>${tipRow("Sessions", c)}${tipRow("Time", h)}${tipRow("Elevation ↑", `${el2} m`)}${d !== "–" ? tipRow("Distance", d) : ""}`);
+    });
+    r.addEventListener("mouseleave", hideTip);
+  });
+}
+function renderOtherChart() {
+  const el = document.getElementById("spark-other");
+  if (!el) return;
+  const weeks = M.weeks.slice(-12);
+  stackedBars(el, {
+    labels: weeks, keys: [SPORT.other], compact: true, xFmt: fmtDay, unit: "h",
+    rows: weeks.map((w) => ({ label: w, other: M.wk[w].other.h })),
+    yFmt: (v) => `${v.toFixed(v % 1 ? 1 : 0)}`, tipTitle: (d) => `Week of ${fmtDay(d)}`,
+    extraTip: (i) => [["Sessions", M.wk[weeks[i]].other.n]],
   });
 }
 
@@ -651,7 +773,7 @@ function stackedBars(el, o) {
     S("text", { x: m.l - 6, y: y(t) + 3.5, "text-anchor": "end" }, svg).textContent = o.yFmt(t) + (t && o.unit ? o.unit : "");
   });
   const xf = o.xFmt || ((s) => s);
-  xTickIdx(n, iw, o.compact ? 60 : 58).forEach((i) => {
+  xTickIdx(n, iw, o.compact ? 80 : 58).forEach((i) => {
     S("text", { x: m.l + band * i + band / 2, y: H - 6, "text-anchor": "middle" }, svg).textContent = xf(o.labels[i]);
   });
 

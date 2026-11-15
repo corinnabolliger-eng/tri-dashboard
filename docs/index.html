@@ -39,6 +39,19 @@
     <section class="card wide">
       <div class="card-head">
         <div>
+          <h2>Training plan</h2>
+          <p class="muted">Built from your recent training, targets, race date and recovery data</p>
+        </div>
+        <div class="seg" id="plan-tab" role="group" aria-label="Week">
+          <button data-p="this" class="on">This week</button><button data-p="next">Next week</button>
+        </div>
+      </div>
+      <div id="plan"></div>
+    </section>
+
+    <section class="card wide">
+      <div class="card-head">
+        <div>
           <h2>Fitness, fatigue &amp; form</h2>
           <p class="muted">Fitness = 42-day load average · Fatigue = 7-day · Form = yesterday's fitness − fatigue</p>
         </div>
@@ -63,6 +76,14 @@
     </section>
 
     <section class="sports" id="sports"></section>
+
+    <section class="card wide">
+      <div class="card-head"><div>
+        <h2><span class="dot-h" style="background:var(--other)"></span>Outdoor &amp; other</h2>
+        <p class="muted">Hiking, ski touring and everything that isn't swim, bike, run or strength</p>
+      </div></div>
+      <div id="other"></div>
+    </section>
 
     <section class="grid2">
       <div class="card">
@@ -114,6 +135,7 @@
 
   <div id="tip" class="tip" role="tooltip" hidden></div>
 </div>
+<script src="plan.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
