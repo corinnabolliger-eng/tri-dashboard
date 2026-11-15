@@ -5,13 +5,14 @@
   ],
   "weekly_targets_hours": { "swim": 3, "bike": 7, "run": 4.5, "strength": 2.25 },
   "plan_week": {
-    "Mon": ["strength"],
-    "Tue": ["bike:key", "swim:technique"],
-    "Wed": ["run:key", "strength"],
-    "Thu": ["bike:easy", "swim:main"],
-    "Fri": ["run:easy", "strength"],
-    "Sat": ["bike:long", "run:brick"],
-    "Sun": ["run:long"]
+    "Mon": ["bike:Z2"],
+    "Tue": ["strength:fullbody"],
+    "Wed": ["run:key", "bike:threshold"],
+    "Thu": ["strength:leg","swim:technique"],
+    "Fri": ["Bike:Z2"],
+    "Sat": ["strength:fullbody"],
+    "Sun": ["swim: long swim", run:easy]
   },
   "heart_rate_zone_names": ["Z1 Recovery", "Z2 Endurance", "Z3 Tempo", "Z4 Threshold", "Z5 VO2max"]
 }
+
