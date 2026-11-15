@@ -9,28 +9,42 @@
  *  4. Fatigue & readiness: very negative form (TSB), low/unbalanced HRV or an elevated
  *     resting HR make the plan lighter and turn the next hard session into an easy one.
  *
- * The weekly template (which day gets what) is TEMPLATE below — change it to fit your week.
+ * Which day gets what comes from "plan_week" in config.json (edit it there).
+ * If it's missing, DEFAULT_WEEK below is used.
  * Day index: 0 = Mon … 6 = Sun.
  */
 "use strict";
 
 const PLAN_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-// role: key = quality session, easy, long, brick (run straight off the bike), technique, main
-const TEMPLATE = [
-  { day: 1, sport: "bike", role: "key", share: 0.30 },
-  { day: 3, sport: "bike", role: "easy", share: 0.25 },
-  { day: 5, sport: "bike", role: "long", share: 0.45 },
-  { day: 2, sport: "run", role: "key", share: 0.30 },
-  { day: 4, sport: "run", role: "easy", share: 0.20 },
-  { day: 5, sport: "run", role: "brick", share: 0.10 }, // only in Build / Peak
-  { day: 6, sport: "run", role: "long", share: 0.40 },
-  { day: 1, sport: "swim", role: "technique", share: 0.5 },
-  { day: 3, sport: "swim", role: "main", share: 0.5 },
-  { day: 2, sport: "strength", role: "main", share: 0.5 },
-  { day: 4, sport: "strength", role: "main", share: 0.5 },
-];
-const REST_DAY = 0;
+// Session codes: "sport:role". Roles: key (hard session), easy, long, brick (run right after the ride),
+// technique / main (swim). Strength is just "strength". "rest" = rest day.
+const DEFAULT_WEEK = {
+  Mon: ["rest"],
+  Tue: ["bike:key", "swim:technique"],
+  Wed: ["run:key", "strength"],
+  Thu: ["bike:easy", "swim:main"],
+  Fri: ["run:easy", "strength"],
+  Sat: ["bike:long", "run:brick"],
+  Sun: ["run:long"],
+};
+// How big each session is relative to the others of the same sport
+const ROLE_WEIGHT = { long: 1.6, key: 1.1, easy: 0.85, brick: 0.35, technique: 1, main: 1 };
+
+function weekTemplate() {
+  const wk = CONFIG.plan_week || DEFAULT_WEEK;
+  const slots = [];
+  let restDay = -1;
+  PLAN_DAYS.forEach((name, day) => {
+    (wk[name] || []).forEach((code) => {
+      const [sport, role = sport === "strength" ? "main" : "easy"] = String(code).toLowerCase().trim().split(":");
+      if (sport === "rest") { restDay = day; return; }
+      if (!["swim", "bike", "run", "strength"].includes(sport)) return;
+      slots.push({ day, sport, role, share: ROLE_WEIGHT[role] || 1 });
+    });
+  });
+  return { slots, restDay };
+}
 const MIN_MINUTES = { swim: 20, bike: 30, run: 20, strength: 20 };
 
 const PHASE_INFO = {
@@ -130,24 +144,25 @@ function buildPlan(monday, isCurrent, prevWasRecovery) {
   const thisWeek = M.thisWeek;
 
   // reference: the last 4 completed weeks
+  const ENDURANCE = ["swim", "bike", "run"];
   const ref = [1, 2, 3, 4].map((i) => addDays(thisWeek, -7 * i));
   const refH = (k) => ref.reduce((s, w) => s + (M.wk[w] ? M.wk[w][k].h : 0), 0) / 4;
-  const refTotal = DISCIPLINES.reduce((s, k) => s + refH(k), 0);
-  const tgtTotal = DISCIPLINES.reduce((s, k) => s + (targets[k] || 0), 0);
+  const refTotal = ENDURANCE.reduce((s, k) => s + refH(k), 0);
+  const tgtTotal = ENDURANCE.reduce((s, k) => s + (targets[k] || 0), 0);
 
   // recovery week every 4th week in Base/Build
   let recovery = false;
   if (phase === "Base" || phase === "Build") {
-    const prior = isCurrent ? ref.slice(0, 3) : null;
-    recovery = isCurrent ? prior.every((w) => !wasLight(w) && weekHours(w) > 0) : !prevWasRecovery && ref.slice(0, 2).every((w) => !wasLight(w) && weekHours(w) > 0);
-    if (recovery) notes.push("3 solid weeks in a row, so this is a lighter recovery week (≈ −35%).");
+    recovery = isCurrent ? ref.slice(0, 3).every((w) => !wasLight(w) && weekHours(w) > 0)
+      : !prevWasRecovery && ref.slice(0, 2).every((w) => !wasLight(w) && weekHours(w) > 0);
+    if (recovery) notes.push("3 solid weeks in a row, so this is a lighter recovery week (≈ −35% swim/bike/run).");
   }
 
-  // total volume
+  // swim/bike/run volume: target, but at most ~10% above your recent average
   let total = tgtTotal || refTotal * 1.05;
   if (refTotal > 0) {
     const cap = Math.max(refTotal * 1.1, refTotal + 0.75);
-    if (total > cap) { notes.push(`Capped at ${cap.toFixed(1)} h (your 4-week average ${refTotal.toFixed(1)} h + 10%) to build up safely toward your ${tgtTotal} h target.`); total = cap; }
+    if (total > cap) { notes.push(`Swim/bike/run capped at ${cap.toFixed(1)} h (your 4-week average ${refTotal.toFixed(1)} h + 10%) to build up safely toward your ${tgtTotal} h target.`); total = cap; }
   }
   let factor = PHASE_INFO[phase].factor * (recovery ? 0.65 : 1);
   const ready = readiness();
@@ -161,18 +176,21 @@ function buildPlan(monday, isCurrent, prevWasRecovery) {
   total *= factor;
 
   // split by sport
-  const shares = {};
-  DISCIPLINES.forEach((k) => (shares[k] = tgtTotal ? (targets[k] || 0) / tgtTotal : refTotal ? refH(k) / refTotal : 0.25));
-  if (phase === "Taper" || phase === "Race week" || phase === "Recovery") { total -= total * shares.strength * 0.5; }
-  const sportH = Object.fromEntries(DISCIPLINES.map((k) => [k, total * shares[k]]));
+  const sportH = {};
+  ENDURANCE.forEach((k) => (sportH[k] = total * (tgtTotal ? (targets[k] || 0) / tgtTotal : refTotal ? refH(k) / refTotal : 1 / 3)));
+  // strength: your target as a steady habit (not part of the 10% cap), lighter in recovery / taper
+  const strengthBase = targets.strength != null ? targets.strength : refH("strength");
+  const sf = phase === "Taper" || phase === "Race week" || phase === "Recovery" ? 0.4 : recovery ? 0.7 : 1;
+  sportH.strength = strengthBase * sf;
+  total += sportH.strength;
+  const refAll = refTotal + refH("strength");
 
   // place sessions
-  const days = PLAN_DAYS.map((name, i) => ({ date: addDays(monday, i), sessions: [], rest: i === REST_DAY }));
+  const { slots: TEMPLATE, restDay } = weekTemplate();
+  const days = PLAN_DAYS.map((name, i) => ({ date: addDays(monday, i), sessions: [], rest: i === restDay }));
   const brick = phase === "Build" || phase === "Peak";
   DISCIPLINES.forEach((k) => {
     let slots = TEMPLATE.filter((s) => s.sport === k && (s.role !== "brick" || brick));
-    if (k === "strength" && sportH.strength < 0.75) slots = slots.slice(0, 1);
-    if (k === "swim" && sportH.swim >= 3) slots = slots.concat({ day: REST_DAY, sport: "swim", role: "technique", share: 0.25 });
     let mins = slots.map((s) => s.share);
     const sum = mins.reduce((a, b) => a + b, 0);
     mins = mins.map((s) => (sportH[k] * 60 * s) / sum);
@@ -218,7 +236,7 @@ function buildPlan(monday, isCurrent, prevWasRecovery) {
     });
   });
 
-  return { monday, phase, recovery, goal, weeksTo, total, refTotal, sportH, days, notes };
+  return { monday, phase, recovery, goal, weeksTo, total, refTotal, refAll, sportH, days, notes };
 }
 
 /* ------------------------------------------------------------------ render */
@@ -235,7 +253,7 @@ function renderPlan() {
     : plan.goal ? esc(plan.goal.name) : "No race set. Add one in config.json";
   const chips = DISCIPLINES.filter((k) => plan.sportH[k] > 0.05).map((k) =>
     `<span class="chip"><i style="background:${SPORT[k].color}"></i>${SPORT[k].name} ${fmtHM(plan.sportH[k] * 3600)}</span>`).join("");
-  const diff = plan.refTotal ? Math.round((plan.total / plan.refTotal - 1) * 100) : null;
+  const diff = plan.refAll ? Math.round((plan.total / plan.refAll - 1) * 100) : null;
 
   const actualsByDay = {};
   M.acts.filter((a) => a.date >= plan.monday && a.date <= addDays(plan.monday, 6))

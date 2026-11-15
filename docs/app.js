@@ -184,7 +184,9 @@ function buildModel(data) {
   const acts = (data.activities || []).map((a) => {
     let sport = a.sport === "multi" ? "other" : a.sport;
     if (sport === "other" && isStrength(a.type)) sport = "strength"; // older data stored strength as "other"
-    return { ...a, sport, L: actLoad({ ...a, sport }) };
+    // Garmin "moving time" leaves out rests between sets / breaks: use full duration there
+    const dur_s = (sport === "strength" || sport === "other") && a.elapsed_s ? a.elapsed_s : a.dur_s;
+    return { ...a, sport, dur_s, L: actLoad({ ...a, sport, dur_s }) };
   });
   const health = data.health || {};
 
