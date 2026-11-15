@@ -1,0 +1,242 @@
+/* Weekly training plan — rule-based, built from your own numbers.
+ *
+ * How it decides:
+ *  1. Phase from the weeks to your next race (A-race preferred):
+ *     Base (>12 wk) · Build (5–12) · Peak (3–4) · Taper (1–2) · Race week · Recovery (week after a race)
+ *  2. Volume: your weekly targets (config.json), but never more than ~10% above
+ *     your average of the last 4 completed weeks (safe progression).
+ *  3. Every 4th week is a lighter recovery week (≈ −35%) during Base/Build.
+ *  4. Fatigue & readiness: very negative form (TSB), low/unbalanced HRV or an elevated
+ *     resting HR make the plan lighter and turn the next hard session into an easy one.
+ *
+ * Which day gets what comes from "plan_week" in config.json (edit it there).
+ * If it's missing, DEFAULT_WEEK below is used.
+ * Day index: 0 = Mon … 6 = Sun.
+ */
+"use strict";
+
+const PLAN_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+// Session codes: "sport:role". Roles: key (hard session), easy, long, brick (run right after the ride),
+// technique / main (swim). Strength is just "strength". "rest" = rest day.
+const DEFAULT_WEEK = {
+  Mon: ["rest"],
+  Tue: ["bike:key", "swim:technique"],
+  Wed: ["run:key", "strength"],
+  Thu: ["bike:easy", "swim:main"],
+  Fri: ["run:easy", "strength"],
+  Sat: ["bike:long", "run:brick"],
+  Sun: ["run:long"],
+};
+// How big each session is relative to the others of the same sport
+const ROLE_WEIGHT = { long: 1.6, key: 1.1, easy: 0.85, brick: 0.35, technique: 1, main: 1 };
+
+function weekTemplate() {
+  const wk = CONFIG.plan_week || DEFAULT_WEEK;
+  const slots = [];
+  let restDay = -1;
+  PLAN_DAYS.forEach((name, day) => {
+    (wk[name] || []).forEach((code) => {
+      const [sport, role = sport === "strength" ? "main" : "easy"] = String(code).toLowerCase().trim().split(":");
+      if (sport === "rest") { restDay = day; return; }
+      if (!["swim", "bike", "run", "strength"].includes(sport)) return;
+      slots.push({ day, sport, role, share: ROLE_WEIGHT[role] || 1 });
+    });
+  });
+  return { slots, restDay };
+}
+const MIN_MINUTES = { swim: 20, bike: 30, run: 20, strength: 20 };
+
+const PHASE_INFO = {
+  Base: { factor: 1.0, text: "Building aerobic endurance. Mostly easy Z2, one moderate session per sport." },
+  Build: { factor: 1.0, text: "Adding race-specific intensity: threshold intervals and brick runs." },
+  Peak: { factor: 1.0, text: "Hardest, most race-like weeks. Race-pace work and bricks." },
+  Taper: { factor: 0.65, text: "Less volume, keep some intensity so you arrive fresh and sharp." },
+  "Race week": { factor: 0.4, text: "Short and sharp. Openers only, rest before the race." },
+  Recovery: { factor: 0.5, text: "Recover from the race. Easy, short, whatever feels good." },
+};
+
+function describe(sport, role, phase, easyOnly) {
+  const P = phase;
+  const light = easyOnly || P === "Recovery";
+  if (sport === "bike") {
+    if (role === "long") return P === "Peak" ? ["Long ride", "Z2 with 3×15 min at race effort"] :
+      P === "Taper" || P === "Race week" ? ["Endurance ride", "Steady Z2, a few short race-pace efforts"] : ["Long ride", "Steady Z2 endurance, fuel like on race day"];
+    if (role === "key" && !light) return {
+      Base: ["Tempo ride", "Warm up, 3×10 min Z3 (tempo), 5 min easy between"],
+      Build: ["Threshold intervals", "Warm up, 4×8 min Z4 (threshold), 4 min easy between"],
+      Peak: ["Race-pace ride", "Warm up, 2×20 min at race effort, 5 min easy between"],
+      Taper: ["Openers", "Easy with 5×1 min hard, 2 min easy between"],
+      "Race week": ["Openers", "Easy with 4×30 s at race effort"],
+    }[P];
+    return ["Easy ride", "Z1–Z2, relaxed cadence 85–95 rpm"];
+  }
+  if (sport === "run") {
+    if (role === "long") return P === "Peak" ? ["Long run", "Z2, last 15 min at race pace"] : ["Long run", "Easy Z2, conversational pace"];
+    if (role === "brick") return ["Brick run", "Straight off the bike, first 5 min easy, then race pace"];
+    if (role === "key" && !light) return {
+      Base: ["Easy run + strides", "Z2 with 6×20 s strides at the end"],
+      Build: ["Threshold run", "Warm up, 5×4 min Z4, 2 min jog between"],
+      Peak: ["Race-pace run", "Warm up, 3×10 min at race pace, 3 min jog between"],
+      Taper: ["Short intervals", "Easy with 4×2 min at race pace"],
+      "Race week": ["Shakeout", "Easy with 4×20 s strides"],
+    }[P];
+    return ["Easy run", "Z1–Z2, keep it truly easy"];
+  }
+  if (sport === "swim") {
+    if (role === "main" && !light && (P === "Build" || P === "Peak")) return ["Swim main set", "Warm up 400, 8×100 m at threshold pace, 15 s rest"];
+    if (role === "main" && !light) return ["Aerobic swim", "Warm up, 4×200 m steady, 20 s rest"];
+    return ["Technique swim", "Drills (catch-up, fist, kick) + easy 100s"];
+  }
+  if (sport === "strength") {
+    if (P === "Peak") return ["Strength (maintenance)", "Lighter loads: squats, lunges, core"];
+    if (light) return ["Mobility & core", "20 min mobility, planks, glute activation"];
+    return ["Strength", "Squats, deadlifts, lunges, step-ups, core"];
+  }
+  return ["Session", ""];
+}
+
+function planPhase(monday) {
+  const races = (CONFIG.races || []).slice().sort((a, b) => (a.date < b.date ? -1 : 1));
+  const sunday = addDays(monday, 6);
+  const raceThisWeek = races.filter((r) => r.date >= monday && r.date <= sunday);
+  const recentRace = races.find((r) => r.date < monday && daysBetween(r.date, monday) <= 7 && (r.priority || "A") === "A");
+  const upcoming = races.filter((r) => r.date > sunday);
+  const goal = upcoming.find((r) => (r.priority || "A") === "A") || upcoming[0];
+  const aThisWeek = raceThisWeek.find((r) => (r.priority || "A") === "A");
+  let phase, weeksTo = null;
+  if (aThisWeek) phase = "Race week";
+  else if (recentRace) phase = "Recovery";
+  else if (!goal) phase = "Base";
+  else {
+    weeksTo = Math.floor(daysBetween(monday, goal.date) / 7);
+    phase = weeksTo > 12 ? "Base" : weeksTo > 4 ? "Build" : weeksTo > 2 ? "Peak" : "Taper";
+  }
+  return { phase, goal: aThisWeek || goal, weeksTo, raceThisWeek };
+}
+
+function weekHours(w) { return DISCIPLINES.concat("other").reduce((s, k) => s + (M.wk[w] ? M.wk[w][k].h : 0), 0); }
+
+// Was this past week a light / recovery week? (< 75% of the 4 weeks before it)
+function wasLight(w) {
+  const prev = [1, 2, 3, 4].map((i) => weekHours(addDays(w, -7 * i))).filter((h) => h > 0);
+  if (!prev.length) return false;
+  return weekHours(w) < 0.75 * (prev.reduce((a, b) => a + b, 0) / prev.length);
+}
+
+function readiness() {
+  const notes = [];
+  let flags = 0;
+  const p = M.pmc[M.pmc.length - 1];
+  if (p && p.tsb < -30) { flags++; notes.push(`Form is very low (${p.tsb.toFixed(0)}): fatigue is high.`); }
+  const recent = [0, 1, 2].map((i) => M.health[addDays(TODAY, -i)]).filter(Boolean);
+  const badHrv = recent.filter((r) => ["LOW", "POOR", "UNBALANCED"].includes((r.hrv_status || "").toUpperCase())).length;
+  if (badHrv >= 2) { flags++; notes.push("HRV has been low/unbalanced for 2 of the last 3 nights."); }
+  const rhr = lastHealth("rhr", 1), base = avgHealth("rhr", 28, 1);
+  if (rhr && base && rhr.v - base >= 5) { flags++; notes.push(`Resting HR is ${Math.round(rhr.v - base)} bpm above your 4-week average.`); }
+  return { flags, notes };
+}
+
+function buildPlan(monday, isCurrent, prevWasRecovery) {
+  const { phase, goal, weeksTo, raceThisWeek } = planPhase(monday);
+  const notes = [];
+  const targets = CONFIG.weekly_targets_hours || {};
+  const thisWeek = M.thisWeek;
+
+  // reference: the last 4 completed weeks
+  const ENDURANCE = ["swim", "bike", "run"];
+  const ref = [1, 2, 3, 4].map((i) => addDays(thisWeek, -7 * i));
+  const refH = (k) => ref.reduce((s, w) => s + (M.wk[w] ? M.wk[w][k].h : 0), 0) / 4;
+  const refTotal = ENDURANCE.reduce((s, k) => s + refH(k), 0);
+  const tgtTotal = ENDURANCE.reduce((s, k) => s + (targets[k] || 0), 0);
+
+  // recovery week every 4th week in Base/Build
+  let recovery = false;
+  if (phase === "Base" || phase === "Build") {
+    recovery = isCurrent ? ref.slice(0, 3).every((w) => !wasLight(w) && weekHours(w) > 0)
+      : !prevWasRecovery && ref.slice(0, 2).every((w) => !wasLight(w) && weekHours(w) > 0);
+    if (recovery) notes.push("3 solid weeks in a row, so this is a lighter recovery week (≈ −35% swim/bike/run).");
+  }
+
+  // swim/bike/run volume: target, but at most ~10% above your recent average
+  let total = tgtTotal || refTotal * 1.05;
+  if (refTotal > 0) {
+    const cap = Math.max(refTotal * 1.1, refTotal + 0.75);
+    if (total > cap) { notes.push(`Swim/bike/run capped at ${cap.toFixed(1)} h (your 4-week average ${refTotal.toFixed(1)} h + 10%) to build up safely toward your ${tgtTotal} h target.`); total = cap; }
+  }
+  let factor = PHASE_INFO[phase].factor * (recovery ? 0.65 : 1);
+  const ready = readiness();
+  let easyFirstKeys = 0;
+  if (ready.flags) {
+    notes.push(...ready.notes);
+    if (isCurrent) { easyFirstKeys = ready.flags >= 2 ? 2 : 1; notes.push(`The next ${easyFirstKeys === 1 ? "hard session is" : "two hard sessions are"} switched to easy.`); }
+    else if (ready.flags >= 2) { factor *= 0.85; notes.push("Next week is 15% lighter because of these recovery signals."); }
+  }
+  if (raceThisWeek.some((r) => (r.priority || "A") !== "A") && phase !== "Race week") { factor *= 0.85; notes.push("B-race this week: volume reduced, easy the day before."); }
+  total *= factor;
+
+  // split by sport
+  const sportH = {};
+  ENDURANCE.forEach((k) => (sportH[k] = total * (tgtTotal ? (targets[k] || 0) / tgtTotal : refTotal ? refH(k) / refTotal : 1 / 3)));
+  // strength: your target as a steady habit (not part of the 10% cap), lighter in recovery / taper
+  const strengthBase = targets.strength != null ? targets.strength : refH("strength");
+  const sf = phase === "Taper" || phase === "Race week" || phase === "Recovery" ? 0.4 : recovery ? 0.7 : 1;
+  sportH.strength = strengthBase * sf;
+  total += sportH.strength;
+  const refAll = refTotal + refH("strength");
+
+  // place sessions
+  const { slots: TEMPLATE, restDay } = weekTemplate();
+  const days = PLAN_DAYS.map((name, i) => ({ date: addDays(monday, i), sessions: [], rest: i === restDay }));
+  const brick = phase === "Build" || phase === "Peak";
+  DISCIPLINES.forEach((k) => {
+    let slots = TEMPLATE.filter((s) => s.sport === k && (s.role !== "brick" || brick));
+    let mins = slots.map((s) => s.share);
+    const sum = mins.reduce((a, b) => a + b, 0);
+    mins = mins.map((s) => (sportH[k] * 60 * s) / sum);
+    // drop sessions below the minimum, giving their time to the biggest one
+    let changed = true;
+    while (changed && slots.length > 1) {
+      changed = false;
+      const i = mins.findIndex((m) => m < MIN_MINUTES[k]);
+      if (i >= 0) {
+        const big = mins.indexOf(Math.max(...mins.filter((_, j) => j !== i)));
+        mins[big] += mins[i]; mins.splice(i, 1); slots.splice(i, 1); changed = true;
+      }
+    }
+    slots.forEach((s, i) => {
+      const m = Math.round(mins[i] / 5) * 5;
+      if (m < 15) return;
+      days[s.day].sessions.push({ sport: k, role: s.role, mins: m });
+    });
+  });
+
+  // races in the week: race day + easy day before
+  raceThisWeek.forEach((r) => {
+    const i = daysBetween(monday, r.date);
+    days[i].sessions = [{ sport: "race", race: r, mins: 0 }];
+    if (i > 0) days[i - 1].sessions = [{ sport: "run", role: "shakeout", mins: 20 }];
+    for (let j = i + 1; j < 7 && j <= i + 2; j++) days[j].sessions = days[j].sessions.filter((s) => s.sport === "swim" || s.sport === "bike").slice(0, 1).map((s) => ({ ...s, role: "easy", mins: Math.min(s.mins, 45) }));
+  });
+
+  // describe + readiness swaps (only for today and later)
+  let swaps = easyFirstKeys;
+  const order = { swim: 0, bike: 1, run: 2, strength: 3 };
+  days.forEach((d) => {
+    d.sessions.sort((a, b) => (order[a.sport] ?? 9) - (order[b.sport] ?? 9));
+    d.sessions.forEach((s) => {
+      if (s.sport === "race") { s.title = `🏁 ${s.race.name}`; s.detail = "Race day. Good luck!"; return; }
+      if (s.role === "shakeout") { s.title = "Shakeout"; s.detail = "20 min very easy + 3 short strides, or rest"; s.sport = "run"; return; }
+      let easyOnly = false;
+      if (s.role === "key" && swaps > 0 && d.date >= TODAY) { easyOnly = true; swaps--; s.swapped = true; }
+      [s.title, s.detail] = describe(s.sport, s.role, recovery && phase !== "Peak" ? "Recovery" : phase, easyOnly);
+      s.key = s.role === "key" && !easyOnly && phase !== "Recovery" && !recovery;
+      if (s.role === "long") s.key = true;
+      if (/^Easy|Technique|Mobility/.test(s.title)) s.key = false;
+    });
+  });
+
+  return { monday, phase, recovery, goal, weeksTo, total, refTotal, refAll, sportH, days, notes };
+}
+
+/* Rendering of the plan lives in coach.js */

@@ -1,0 +1,23 @@
+{
+  "title": "Triathlon Training",
+  "races": [
+    { "name": "Marathon", "date": "2027-04-11", "priority": "B" },
+    { "name": "Ironman", "date": "2027-07-04", "priority": "A" }
+  ],
+  "athlete": {
+    "ftp": 210,
+    "max_hr": 192,
+    "_comment": "Optional overrides, otherwise taken from your Garmin data: run_easy_pace (e.g. \"6:45\"), bike_z2_kmh, swim_pace_100m (e.g. \"2:10\")"
+  },
+  "weekly_targets_hours": { "swim": 3, "bike": 7, "run": 4.5, "strength": 2.25 },
+  "plan_week": {
+    "Mon": ["strength"],
+    "Tue": ["bike:key", "swim:technique"],
+    "Wed": ["run:key", "strength"],
+    "Thu": ["bike:easy", "swim:main"],
+    "Fri": ["run:easy", "strength"],
+    "Sat": ["bike:long", "run:brick"],
+    "Sun": ["run:long"]
+  },
+  "heart_rate_zone_names": ["Z1 Recovery", "Z2 Endurance", "Z3 Tempo", "Z4 Threshold", "Z5 VO2max"]
+}

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Triathlon Training</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="viz-root">
+
+  <!-- Lock screen (shown when the data file is encrypted) -->
+  <section id="lock" class="lock" hidden>
+    <form id="lock-form" class="lock-card">
+      <h1>Triathlon Training</h1>
+      <p class="muted">Your Garmin data is encrypted. Enter your dashboard password.</p>
+      <input id="pw" type="password" autocomplete="current-password" placeholder="Dashboard password" required>
+      <label class="check"><input id="remember" type="checkbox"> Remember on this device</label>
+      <button type="submit">Unlock</button>
+      <p id="lock-err" class="err" role="alert"></p>
+    </form>
+  </section>
+
+  <main id="app" hidden>
+    <header class="top">
+      <div>
+        <h1 id="title">Triathlon Training</h1>
+        <p class="muted" id="synced"></p>
+      </div>
+      <div class="top-actions">
+        <button id="theme" class="ghost" type="button" title="Toggle light/dark">Theme</button>
+        <button id="lock-btn" class="ghost" type="button" hidden>Lock</button>
+      </div>
+    </header>
+
+    <section class="kpis" id="kpis"></section>
+
+    <section class="card wide">
+      <div class="card-head">
+        <div>
+          <h2>Coach</h2>
+          <p class="muted">Checks your plan against your Garmin data: load, fitness ramp, fatigue, running limits, structure</p>
+        </div>
+      </div>
+      <div id="coach"></div>
+    </section>
+
+    <section class="card wide">
+      <div class="card-head">
+        <div>
+          <h2>Training plan</h2>
+          <p class="muted">Your plan from <code>docs/training-plan.json</code>, with what you actually did (✓)</p>
+        </div>
+        <div class="seg" id="plan-nav" role="group" aria-label="Week">
+          <button data-n="-1" aria-label="Previous week">◀</button><button data-n="0" id="plan-week" class="on">This week</button><button data-n="1" aria-label="Next week">▶</button>
+        </div>
+      </div>
+      <div id="plan"></div>
+    </section>
+
+    <section class="card wide">
+      <div class="card-head">
+        <div>
+          <h2>Fitness, fatigue &amp; form</h2>
+          <p class="muted">Fitness = 42-day load average · Fatigue = 7-day · Form = yesterday's fitness − fatigue</p>
+        </div>
+        <div class="seg" id="pmc-range" role="group" aria-label="Time range">
+          <button data-d="90">90d</button><button data-d="180" class="on">6m</button><button data-d="365">1y</button>
+        </div>
+      </div>
+      <div id="pmc" class="chart tall"></div>
+    </section>
+
+    <section class="card wide">
+      <div class="card-head">
+        <div>
+          <h2>Weekly training hours</h2>
+          <p class="muted" id="vol-sub"></p>
+        </div>
+        <div class="seg" id="vol-metric" role="group" aria-label="Metric">
+          <button data-m="hours" class="on">Hours</button><button data-m="load">Load</button>
+        </div>
+      </div>
+      <div id="volume" class="chart"></div>
+    </section>
+
+    <section class="sports" id="sports"></section>
+
+    <section class="card wide">
+      <div class="card-head"><div>
+        <h2><span class="dot-h" style="background:var(--other)"></span>Outdoor &amp; other</h2>
+        <p class="muted">Hiking, ski touring and everything that isn't swim, bike, run or strength</p>
+      </div></div>
+      <div id="other"></div>
+    </section>
+
+    <section class="grid2">
+      <div class="card">
+        <div class="card-head"><div>
+          <h2>Intensity distribution</h2>
+          <p class="muted">Time in heart-rate zones, last 28 days</p>
+        </div></div>
+        <div id="zones"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div>
+          <h2>Upcoming races</h2>
+          <p class="muted">Edit <code>docs/config.json</code> to change</p>
+        </div></div>
+        <div id="races"></div>
+        <div id="preds"></div>
+      </div>
+    </section>
+
+    <section class="grid3">
+      <div class="card">
+        <div class="card-head"><div><h2>HRV</h2><p class="muted">Nightly average, ms · band = your baseline</p></div></div>
+        <div id="hrv" class="chart short"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><h2>Resting heart rate</h2><p class="muted">bpm, last 60 days</p></div></div>
+        <div id="rhr" class="chart short"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><h2>Sleep</h2><p class="muted">Hours per night, last 30 days</p></div></div>
+        <div id="sleep" class="chart short"></div>
+      </div>
+    </section>
+
+    <section class="card wide">
+      <div class="card-head"><div><h2>Recent sessions</h2></div></div>
+      <div class="table-wrap"><table id="recent"></table></div>
+    </section>
+
+    <footer class="muted">Data from Garmin Connect via the unofficial <code>garminconnect</code> library · synced nightly by GitHub Actions</footer>
+  </main>
+
+  <section id="empty" class="lock" hidden>
+    <div class="lock-card">
+      <h1>No data yet</h1>
+      <p class="muted">Run the “Sync Garmin &amp; publish dashboard” workflow in the GitHub Actions tab, then reload.</p>
+    </div>
+  </section>
+
+  <div id="tip" class="tip" role="tooltip" hidden></div>
+</div>
+<script src="plan.js"></script>
+<script src="coach.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
