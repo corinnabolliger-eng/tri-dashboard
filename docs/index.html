@@ -39,11 +39,21 @@
     <section class="card wide">
       <div class="card-head">
         <div>
-          <h2>Training plan</h2>
-          <p class="muted">Built from your recent training, targets, race date and recovery data</p>
+          <h2>Coach</h2>
+          <p class="muted">Checks your plan against your Garmin data: load, fitness ramp, fatigue, running limits, structure</p>
         </div>
-        <div class="seg" id="plan-tab" role="group" aria-label="Week">
-          <button data-p="this" class="on">This week</button><button data-p="next">Next week</button>
+      </div>
+      <div id="coach"></div>
+    </section>
+
+    <section class="card wide">
+      <div class="card-head">
+        <div>
+          <h2>Training plan</h2>
+          <p class="muted">Your plan from <code>docs/training-plan.json</code>, with what you actually did (✓)</p>
+        </div>
+        <div class="seg" id="plan-nav" role="group" aria-label="Week">
+          <button data-n="-1" aria-label="Previous week">◀</button><button data-n="0" id="plan-week" class="on">This week</button><button data-n="1" aria-label="Next week">▶</button>
         </div>
       </div>
       <div id="plan"></div>
@@ -136,6 +146,7 @@
   <div id="tip" class="tip" role="tooltip" hidden></div>
 </div>
 <script src="plan.js"></script>
+<script src="coach.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

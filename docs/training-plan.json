@@ -1,0 +1,537 @@
+{
+  "_help": [
+    "WORKOUTS = your library. Each has: sport (swim/bike/run/strength/other), name, target (shown under the name),",
+    "min (default minutes) and intensity: recovery, easy, moderate, hard, very_hard, strength or race.",
+    "WEEKS = one entry per week, keyed by the MONDAY date (YYYY-MM-DD). Each day is a list of workouts:",
+    "  \"bike_z2\"                         -> the workout with its default duration",
+    "  {\"w\": \"run_long\", \"km\": 16}       -> with a distance (duration is estimated from your Garmin data)",
+    "  {\"w\": \"bike_z2\", \"h\": 2}           or {\"w\": \"swim_long\", \"min\": 50}",
+    "  {\"w\": \"bike_1x30\", \"note\": \"172 W\"} -> extra note shown on the card",
+    "Optional per week: label, phase, comment, run_limit_km (max running km that week), long_run_limit_km.",
+    "An empty list [] = rest day. Weeks you don't list get an automatic suggestion."
+  ],
+  "workouts": {
+    "bike_z2": {"sport": "bike", "name": "Z2 ride", "target": "118–158 W (56–75% FTP)", "min": 60, "intensity": "easy"},
+    "bike_long": {"sport": "bike", "name": "Z2 long ride", "target": "118–158 W, fuel like on race day", "min": 180, "intensity": "easy"},
+    "bike_1x30": {"sport": "bike", "name": "1×30' @100% FTP", "target": "210 W · 15' warm-up, 10' cool-down", "min": 60, "intensity": "hard"},
+    "bike_4x16": {"sport": "bike", "name": "4×16' @96% FTP", "target": "202 W · 4' easy between", "min": 95, "intensity": "hard"},
+    "bike_4x8": {"sport": "bike", "name": "4×8' @106% FTP", "target": "223 W · 4' easy between", "min": 65, "intensity": "hard"},
+    "bike_4x4": {"sport": "bike", "name": "4×4' @118% FTP", "target": "248 W · 4' easy between", "min": 55, "intensity": "very_hard"},
+    "bike_30_30": {"sport": "bike", "name": "3×10×30''/30'' @135% FTP", "target": "284 W · 5' easy between sets", "min": 60, "intensity": "very_hard"},
+    "run_rekom": {"sport": "run", "name": "Recovery run (REKOM)", "target": "HR < 122 · slower than 8:07/km", "min": 30, "intensity": "easy"},
+    "run_z2": {"sport": "run", "name": "Z2 run (GA1)", "target": "HR 122–146 · 5:43–8:07/km", "min": 40, "intensity": "easy"},
+    "run_long": {"sport": "run", "name": "Long run (GA1)", "target": "HR 122–146 · 5:43–8:07/km", "min": 90, "intensity": "easy"},
+    "run_ga2": {"sport": "run", "name": "GA2 run", "target": "HR 146–158 · 4:50–5:43/km", "min": 50, "intensity": "moderate"},
+    "run_tempo": {"sport": "run", "name": "Tempo run (Schwelle)", "target": "HR ~158 · ~4:50/km", "min": 60, "intensity": "hard"},
+    "run_interval": {"sport": "run", "name": "Interval run (EB)", "target": "HR 158–165 · 4:13–4:50/km", "min": 50, "intensity": "hard"},
+    "swim_drills": {"sport": "swim", "name": "Drills & intervals", "target": "Drills + Z4–5 intervals", "min": 60, "intensity": "moderate"},
+    "swim_intervals": {"sport": "swim", "name": "Swim intervals", "target": "Z4–5", "min": 60, "intensity": "hard"},
+    "swim_tempo": {"sport": "swim", "name": "Tempo swim", "target": "Z3", "min": 50, "intensity": "moderate"},
+    "swim_long": {"sport": "swim", "name": "Long swim", "target": "Z2, steady", "min": 60, "intensity": "easy"},
+    "swim_outdoor": {"sport": "swim", "name": "Outdoor swim", "target": "Z2, open water", "min": 45, "intensity": "easy"},
+    "swim_shakeout": {"sport": "swim", "name": "Shakeout swim", "target": "Very easy", "min": 15, "intensity": "easy"},
+    "weight_max": {"sport": "strength", "name": "Maximalkraft", "target": "Full body, heavy 4–6 reps, 2–3' rest · rotate workouts A/B/C", "min": 60, "intensity": "strength"},
+    "weight_endurance": {"sport": "strength", "name": "Kraftausdauer", "target": "Circuit 12–20 reps, 30–45'' rest · calves, core, hips", "min": 45, "intensity": "strength"},
+    "weight_plyo": {"sport": "strength", "name": "Plyometrics + Mobility", "target": "5–10' mobility, then plyo fresh · 60–90'' rest", "min": 45, "intensity": "strength"},
+    "weight_full": {"sport": "strength", "name": "Weight full body", "target": "", "min": 60, "intensity": "strength"},
+    "weight_legs": {"sport": "strength", "name": "Weight legs", "target": "", "min": 50, "intensity": "strength"},
+    "weight_upper": {"sport": "strength", "name": "Weight upper body", "target": "", "min": 45, "intensity": "strength"},
+    "weight_me": {"sport": "strength", "name": "Muscular endurance legs", "target": "Box step, front lunge, split jump squat, squat jump 6×10", "min": 45, "intensity": "strength"},
+    "mobility": {"sport": "strength", "name": "Mobility", "target": "", "min": 30, "intensity": "recovery"},
+    "hike": {"sport": "other", "name": "Hiking day", "target": "", "min": 240, "intensity": "easy"},
+    "race": {"sport": "other", "name": "Race", "target": "", "min": 180, "intensity": "race"}
+  },
+  "weeks": {
+    "2026-11-09": {
+      "label": "",
+      "phase": "",
+      "run_limit_km": 9.0,
+      "long_run_limit_km": 5.0,
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 1.0}],
+        "Tue": ["weight_full"],
+        "Wed": ["swim_drills", {"w": "run_z2", "km": 4.0}],
+        "Thu": ["bike_4x16"],
+        "Fri": ["weight_full"],
+        "Sat": ["bike_long", {"w": "run_z2", "km": 5.0}],
+        "Sun": ["swim_long", "weight_legs"]
+      }
+    },
+    "2026-11-16": {
+      "label": "Regenerationswoche",
+      "phase": "Basis-Aufbau Laufaufbau",
+      "run_limit_km": 10.0,
+      "long_run_limit_km": 6.0,
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 1.0}],
+        "Tue": ["weight_max", "swim_drills"],
+        "Wed": ["bike_1x30"],
+        "Thu": ["weight_endurance"],
+        "Fri": [{"w": "swim_long", "km": 2.5}],
+        "Sat": ["bike_long", {"w": "run_z2", "km": 6.0}],
+        "Sun": ["weight_plyo"]
+      }
+    },
+    "2026-11-23": {
+      "label": "Reha - Wk10",
+      "phase": "Basis-Aufbau Laufaufbau",
+      "run_limit_km": 11.0,
+      "long_run_limit_km": 7.0,
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 1.0}],
+        "Tue": ["weight_max"],
+        "Wed": [{"w": "bike_1x30", "note": "172 W"}],
+        "Thu": ["weight_endurance"],
+        "Fri": [{"w": "swim_long", "km": 2.5}],
+        "Sat": ["bike_long", {"w": "run_z2", "km": 7.0}],
+        "Sun": ["weight_plyo"]
+      }
+    },
+    "2026-11-30": {
+      "label": "Lauf-Rebuild - Wk1",
+      "phase": "Basis-Aufbau Laufaufbau",
+      "run_limit_km": 12.0,
+      "long_run_limit_km": 7.0,
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 1.0}],
+        "Tue": ["weight_max", "swim_drills"],
+        "Wed": [{"w": "run_z2", "km": 6.0}, "bike_4x8"],
+        "Thu": ["weight_endurance"],
+        "Fri": [{"w": "swim_long", "km": 2.5}],
+        "Sat": ["bike_long", {"w": "run_z2", "km": 6.0}],
+        "Sun": ["weight_plyo"]
+      }
+    },
+    "2026-12-07": {
+      "label": "Lauf-Rebuild - Wk2",
+      "phase": "Basis-Aufbau Laufaufbau",
+      "run_limit_km": 13.0,
+      "long_run_limit_km": 8.0,
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 1.0}],
+        "Tue": ["weight_max", "swim_drills"],
+        "Wed": [{"w": "run_z2", "km": 6.5}, "bike_1x30"],
+        "Thu": ["weight_endurance"],
+        "Fri": [{"w": "swim_long", "km": 2.6}],
+        "Sat": ["bike_long", {"w": "run_z2", "km": 6.5}],
+        "Sun": ["weight_plyo"]
+      }
+    },
+    "2026-12-14": {
+      "label": "Lauf-Rebuild - Wk3",
+      "phase": "Basis-Aufbau Laufaufbau",
+      "run_limit_km": 14.0,
+      "long_run_limit_km": 8.0,
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 1.0}],
+        "Tue": ["weight_max", "swim_drills"],
+        "Wed": [{"w": "run_z2", "km": 7.0}, "bike_4x16"],
+        "Thu": ["weight_endurance"],
+        "Fri": [{"w": "swim_long", "km": 2.7}],
+        "Sat": ["bike_long", {"w": "run_z2", "km": 7.0}],
+        "Sun": ["weight_plyo"]
+      }
+    },
+    "2026-12-21": {
+      "label": "Feiertagswoche (leicht)",
+      "phase": "Basis-Aufbau Laufaufbau",
+      "run_limit_km": 15.0,
+      "long_run_limit_km": 8.0,
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 1.0}],
+        "Tue": ["weight_max", "swim_drills"],
+        "Wed": [{"w": "run_z2", "km": 7.5}, "bike_4x8"],
+        "Thu": ["weight_endurance"],
+        "Fri": [{"w": "swim_long", "km": 2.8}],
+        "Sat": ["bike_long", {"w": "run_z2", "km": 7.5}],
+        "Sun": ["weight_plyo"]
+      }
+    },
+    "2026-12-28": {
+      "label": "Lauf-Rebuild - Wk5",
+      "phase": "Basis-Aufbau Laufaufbau",
+      "run_limit_km": 16.0,
+      "long_run_limit_km": 9.0,
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 1.0}],
+        "Tue": ["weight_max", "swim_drills"],
+        "Wed": [{"w": "run_z2", "km": 8.0}, "bike_1x30"],
+        "Thu": ["weight_endurance"],
+        "Fri": [{"w": "swim_long", "km": 2.9}],
+        "Sat": ["bike_long", {"w": "run_z2", "km": 8.0}],
+        "Sun": ["weight_plyo"]
+      }
+    },
+    "2027-01-04": {
+      "label": "Lauf-Rebuild - Wk6",
+      "phase": "Basis-Aufbau Laufaufbau",
+      "run_limit_km": 16.0,
+      "long_run_limit_km": 9.0,
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 1.0}],
+        "Tue": ["weight_max", "swim_drills"],
+        "Wed": [{"w": "run_z2", "km": 8.0}, "bike_4x16"],
+        "Thu": ["weight_endurance"],
+        "Fri": [{"w": "swim_long", "km": 3.0}],
+        "Sat": ["bike_long", {"w": "run_z2", "km": 8.0}],
+        "Sun": ["weight_plyo"]
+      }
+    },
+    "2027-01-11": {
+      "label": "Lauf-Rebuild - Wk7",
+      "phase": "Basis-Aufbau Laufaufbau",
+      "run_limit_km": 5.0,
+      "long_run_limit_km": 5.0,
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 1.0}],
+        "Tue": ["weight_max", "swim_drills"],
+        "Wed": [{"w": "run_z2", "km": 2.5}, "bike_4x8"],
+        "Thu": ["weight_endurance"],
+        "Fri": [{"w": "swim_long", "km": 2.0}],
+        "Sat": ["bike_long", {"w": "run_z2", "km": 2.5}],
+        "Sun": ["weight_plyo"]
+      }
+    },
+    "2027-01-18": {
+      "label": "Regenerationswoche",
+      "phase": "Basis-Aufbau Laufaufbau",
+      "run_limit_km": 5.0,
+      "long_run_limit_km": 5.0,
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 1.0}],
+        "Tue": ["weight_max", "swim_drills"],
+        "Wed": [{"w": "run_z2", "km": 2.5}, "bike_1x30"],
+        "Thu": ["weight_endurance"],
+        "Fri": [{"w": "swim_long", "km": 2.6}],
+        "Sat": ["bike_long", {"w": "run_z2", "km": 2.5}],
+        "Sun": ["weight_plyo"]
+      }
+    },
+    "2027-01-25": {
+      "label": "Lauf-Rebuild - Wk9",
+      "phase": "Basis-Aufbau Laufaufbau",
+      "run_limit_km": 5.0,
+      "long_run_limit_km": 5.0,
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 1.0}],
+        "Tue": ["weight_max", "swim_drills"],
+        "Wed": [{"w": "run_z2", "km": 2.5}, "bike_4x16"],
+        "Thu": ["weight_endurance"],
+        "Fri": [{"w": "swim_long", "km": 2.7}],
+        "Sat": ["bike_long", {"w": "run_z2", "km": 2.5}],
+        "Sun": ["weight_plyo"]
+      }
+    },
+    "2027-02-01": {
+      "label": "Lauf-Rebuild - Wk10",
+      "phase": "Basis-Aufbau Laufaufbau",
+      "run_limit_km": 5.0,
+      "long_run_limit_km": 5.0,
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 1.0}],
+        "Tue": ["weight_max", "swim_drills"],
+        "Wed": [{"w": "run_z2", "km": 2.5}, "bike_4x8"],
+        "Thu": ["weight_endurance"],
+        "Fri": [{"w": "swim_long", "km": 2.8}],
+        "Sat": ["bike_long", {"w": "run_z2", "km": 2.5}],
+        "Sun": ["weight_plyo"]
+      }
+    },
+    "2027-02-08": {
+      "label": "Entlastungswoche - Florenz",
+      "phase": "Basis-Aufbau Laufaufbau",
+      "comment": "Florenz",
+      "run_limit_km": 5.0,
+      "long_run_limit_km": 5.0,
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 1.0}],
+        "Tue": ["weight_max", "swim_drills"],
+        "Wed": [{"w": "run_z2", "km": 5.0}, "bike_1x30"],
+        "Thu": [],
+        "Fri": [{"w": "run_z2", "km": 6.0}],
+        "Sat": ["weight_endurance"],
+        "Sun": []
+      }
+    },
+    "2027-02-15": {
+      "label": "Aufbau - Wk1",
+      "phase": "Aufbau",
+      "comment": "Volle 3er-Lauf-Struktur: Intervall/Schwelle (Mi), Dauerlauf (Fr), Long Run (So). Kraft weiterhin 3x/Woche.",
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 2.0}],
+        "Tue": ["weight_max", "swim_drills"],
+        "Wed": [{"w": "run_interval", "km": 6.0}, "bike_4x8"],
+        "Thu": ["weight_endurance"],
+        "Fri": [{"w": "swim_long", "km": 2.4}, {"w": "run_z2", "km": 6.0}],
+        "Sat": [{"w": "bike_long", "km": 60.0}, "weight_plyo"],
+        "Sun": [{"w": "run_long", "km": 14.0}]
+      }
+    },
+    "2027-02-22": {
+      "label": "Aufbau - Wk2",
+      "phase": "Aufbau",
+      "comment": "Volle 3er-Lauf-Struktur: Intervall/Schwelle (Mi), Dauerlauf (Fr), Long Run (So). Kraft weiterhin 3x/Woche.",
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 2.0}],
+        "Tue": ["weight_max", "swim_drills"],
+        "Wed": [{"w": "run_interval", "km": 6.0}, "bike_4x4"],
+        "Thu": ["weight_endurance"],
+        "Fri": [{"w": "swim_long", "km": 2.5}, {"w": "run_z2", "km": 6.0}],
+        "Sat": [{"w": "bike_long", "km": 80.0}, "weight_plyo"],
+        "Sun": [{"w": "run_long", "km": 16.0}]
+      }
+    },
+    "2027-03-01": {
+      "label": "Aufbau - Wk3",
+      "phase": "Aufbau",
+      "comment": "Volle 3er-Lauf-Struktur: Intervall/Schwelle (Mi), Dauerlauf (Fr), Long Run (So). Kraft weiterhin 3x/Woche.",
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 2.0}],
+        "Tue": ["weight_max", "swim_drills"],
+        "Wed": [{"w": "run_interval", "km": 6.0}, "bike_4x16"],
+        "Thu": ["weight_endurance"],
+        "Fri": [{"w": "swim_long", "km": 2.6}, {"w": "run_z2", "km": 7.0}],
+        "Sat": [{"w": "bike_long", "km": 90.0}, "weight_plyo"],
+        "Sun": [{"w": "run_long", "km": 18.0}]
+      }
+    },
+    "2027-03-08": {
+      "label": "Aufbau - Wk4",
+      "phase": "Aufbau",
+      "comment": "Regenerationswoche innerhalb Aufbau (reduziertes Volumen).",
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 1.5}],
+        "Tue": ["weight_max", "swim_drills"],
+        "Wed": [{"w": "run_interval", "km": 6.0}, "bike_4x8"],
+        "Thu": ["weight_endurance"],
+        "Fri": [{"w": "swim_long", "km": 2.2}, {"w": "run_z2", "km": 6.0}],
+        "Sat": [{"w": "bike_long", "km": 60.0}, "weight_plyo"],
+        "Sun": [{"w": "run_long", "km": 14.0}]
+      }
+    },
+    "2027-03-15": {
+      "label": "Aufbau - Wk5",
+      "phase": "Aufbau",
+      "comment": "Volle 3er-Lauf-Struktur: Intervall/Schwelle (Mi), Dauerlauf (Fr), Long Run (So). Kraft weiterhin 3x/Woche.",
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 2.0}],
+        "Tue": ["weight_max", "swim_drills"],
+        "Wed": [{"w": "run_interval", "km": 6.0}, "bike_4x4"],
+        "Thu": ["weight_endurance"],
+        "Fri": [{"w": "swim_long", "km": 2.8}, {"w": "run_z2", "km": 7.0}],
+        "Sat": [{"w": "bike_long", "km": 100.0}, "weight_plyo"],
+        "Sun": [{"w": "run_long", "km": 22.0}]
+      }
+    },
+    "2027-03-22": {
+      "label": "Aufbau - Wk6",
+      "phase": "Aufbau",
+      "comment": "Volle 3er-Lauf-Struktur: Intervall/Schwelle (Mi), Dauerlauf (Fr), Long Run (So). Kraft weiterhin 3x/Woche.",
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 2.0}],
+        "Tue": ["weight_max", "swim_drills"],
+        "Wed": [{"w": "run_interval", "km": 6.0}, "bike_4x16"],
+        "Thu": ["weight_endurance"],
+        "Fri": [{"w": "swim_long", "km": 2.4}, {"w": "run_z2", "km": 6.0}],
+        "Sat": [{"w": "bike_long", "km": 80.0}, "weight_plyo"],
+        "Sun": [{"w": "run_long", "km": 16.0}]
+      }
+    },
+    "2027-03-29": {
+      "label": "Taper vor Marathon",
+      "phase": "Aufbau",
+      "comment": "Reduktion Lauf- & Radvolumen vor dem Marathon (11.4.). Kraft nur noch 1x (Di), leicht.",
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 1.0}],
+        "Tue": ["weight_max", "swim_drills"],
+        "Wed": [{"w": "run_z2", "km": 6.0}],
+        "Thu": [{"w": "bike_z2", "h": 0.75}],
+        "Fri": [{"w": "swim_long", "km": 1.8}, {"w": "run_z2", "km": 4.0}],
+        "Sat": [{"w": "bike_long", "km": 40.0}],
+        "Sun": [{"w": "run_z2", "km": 8.0}]
+      }
+    },
+    "2027-04-05": {
+      "label": "MARATHON RACE WEEK",
+      "phase": "Aufbau",
+      "comment": "Marathon am So 11.4.27. Mo-Fr nur kurze Shakeouts, kein Rad-Intervall, kein Krafttraining (Frische!).",
+      "days": {
+        "Mon": [{"w": "bike_z2", "km": 20.0}],
+        "Tue": ["swim_drills"],
+        "Wed": [{"w": "run_z2", "km": 4.0}],
+        "Thu": [],
+        "Fri": [{"w": "run_z2", "km": 3.0}],
+        "Sat": [],
+        "Sun": [{"w": "race", "name": "Marathon", "sport": "run", "km": 42.2}]
+      }
+    },
+    "2027-04-12": {
+      "label": "Erholungswoche nach Marathon",
+      "phase": "Aufbau",
+      "comment": "Aktive Regeneration nach dem Marathon - keine Intensitaet, kein langer Ritt.",
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 1.0}],
+        "Tue": ["weight_endurance", "swim_drills"],
+        "Wed": [{"w": "run_z2", "km": 5.0}],
+        "Thu": [{"w": "bike_z2", "h": 1.0}],
+        "Fri": [{"w": "swim_long", "km": 2.0}, {"w": "run_z2", "km": 6.0}],
+        "Sat": [{"w": "bike_long", "km": 60.0}],
+        "Sun": [{"w": "run_z2", "km": 10.0}]
+      }
+    },
+    "2027-04-19": {
+      "label": "Peak - Wk1",
+      "phase": "Peak",
+      "comment": "Rad-Fokus: lange Ausfahrten Richtung 200km. Kraft 2x/Woche (Di Max, Do wechselnd endurance/plyo).",
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 2.0}],
+        "Tue": ["weight_max", "swim_drills"],
+        "Wed": [{"w": "run_interval", "km": 8.0}, "bike_4x4"],
+        "Thu": ["weight_endurance"],
+        "Fri": [{"w": "swim_long", "km": 2.8}, {"w": "run_z2", "km": 7.0}],
+        "Sat": [{"w": "bike_long", "km": 100.0}],
+        "Sun": [{"w": "run_long", "km": 14.0}]
+      }
+    },
+    "2027-04-26": {
+      "label": "Peak - Wk2",
+      "phase": "Peak",
+      "comment": "Rad-Fokus: lange Ausfahrten Richtung 200km. Kraft 2x/Woche (Di Max, Do wechselnd endurance/plyo).",
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 2.0}],
+        "Tue": ["weight_max", "swim_drills"],
+        "Wed": [{"w": "run_interval", "km": 8.0}, "bike_4x8"],
+        "Thu": ["weight_plyo"],
+        "Fri": [{"w": "swim_long", "km": 3.0}, {"w": "run_z2", "km": 8.0}],
+        "Sat": [{"w": "bike_long", "km": 130.0}],
+        "Sun": [{"w": "run_long", "km": 18.0}]
+      }
+    },
+    "2027-05-03": {
+      "label": "HIT-Block-Woche",
+      "phase": "Peak",
+      "comment": "Bewusste HIT-Blockwoche (4 intensive Einheiten statt gleichmaessig verteilt), danach volle Regenerationswoche (Wk34). Evidenzbasiert: Block-Periodisierung (u.a. Roennestad et al.) kann bei bereits trainierten Athlet*innen VO2max/Schwellenleistung staerker steigern als gleichmaessig verteiltes HIT. Kein Sport an 2 Folgetagen, auch hier eingehalten.",
+      "days": {
+        "Mon": [],
+        "Tue": ["weight_max", "swim_drills", "bike_30_30"],
+        "Wed": [{"w": "run_interval", "km": 8.0}],
+        "Thu": [{"w": "bike_z2", "h": 1.0}, "bike_4x4"],
+        "Fri": [{"w": "swim_long", "km": 2.6}],
+        "Sat": [{"w": "bike_long", "km": 70.0}],
+        "Sun": [{"w": "run_interval", "km": 10.0}]
+      }
+    },
+    "2027-05-10": {
+      "label": "Regenerationswoche (nach HIT-Block)",
+      "phase": "Peak",
+      "comment": "Volle Erholung nach der HIT-Blockwoche - notwendig fuer Superkompensation.",
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 1.0}],
+        "Tue": ["weight_max", "swim_drills"],
+        "Wed": [{"w": "run_z2", "km": 6.0}],
+        "Thu": [{"w": "bike_z2", "h": 1.0}],
+        "Fri": [{"w": "swim_long", "km": 2.4}, {"w": "run_z2", "km": 4.0}],
+        "Sat": [{"w": "bike_long", "km": 50.0}],
+        "Sun": [{"w": "run_long", "km": 10.0}]
+      }
+    },
+    "2027-05-17": {
+      "label": "Peak - Wk5",
+      "phase": "Peak",
+      "comment": "Rad-Fokus: lange Ausfahrten Richtung 200km. Kraft 2x/Woche (Di Max, Do wechselnd endurance/plyo). Outdoor-Swim ergaenzt (So abends, kein Konflikt zu Fr-Schwimmen dank Sa dazwischen).",
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 2.0}],
+        "Tue": ["weight_max", "swim_drills"],
+        "Wed": [{"w": "run_interval", "km": 8.0}, "bike_30_30"],
+        "Thu": ["weight_endurance"],
+        "Fri": [{"w": "swim_long", "km": 3.2}, {"w": "run_z2", "km": 8.0}],
+        "Sat": [{"w": "bike_long", "km": 160.0}],
+        "Sun": [{"w": "run_long", "km": 22.0}, "swim_outdoor"]
+      }
+    },
+    "2027-05-24": {
+      "label": "Peak - Wk6",
+      "phase": "Peak",
+      "comment": "Rad-Fokus: lange Ausfahrten Richtung 200km. Kraft 2x/Woche (Di Max, Do wechselnd endurance/plyo). Outdoor-Swim ergaenzt (So abends, kein Konflikt zu Fr-Schwimmen dank Sa dazwischen).",
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 2.0}],
+        "Tue": ["weight_max", "swim_drills"],
+        "Wed": [{"w": "run_interval", "km": 8.0}, "bike_4x4"],
+        "Thu": ["weight_plyo"],
+        "Fri": [{"w": "swim_long", "km": 3.4}, {"w": "run_z2", "km": 8.0}],
+        "Sat": [{"w": "bike_long", "km": 200.0}],
+        "Sun": [{"w": "run_long", "km": 24.0}, "swim_outdoor"]
+      }
+    },
+    "2027-05-31": {
+      "label": "Peak - Wk7",
+      "phase": "Peak",
+      "comment": "Rad-Fokus: lange Ausfahrten Richtung 200km. Kraft 2x/Woche (Di Max, Do wechselnd endurance/plyo). Outdoor-Swim ergaenzt (So abends, kein Konflikt zu Fr-Schwimmen dank Sa dazwischen).",
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 2.0}, {"w": "bike_z2", "h": 1.0}],
+        "Tue": ["weight_max", "swim_drills"],
+        "Wed": [{"w": "run_interval", "km": 8.0}, "bike_4x8"],
+        "Thu": ["weight_endurance"],
+        "Fri": [{"w": "swim_long", "km": 3.0}, {"w": "run_z2", "km": 7.0}],
+        "Sat": [{"w": "bike_long", "km": 170.0}],
+        "Sun": [{"w": "run_long", "km": 20.0}, "swim_outdoor"]
+      }
+    },
+    "2027-06-07": {
+      "label": "Trainingslager Toskana - Peak-Woche",
+      "phase": "Peak",
+      "comment": "Intensive Trainingslager-Woche: 3x 200km Ausfahrten (mit Wk36 zusammen = 4x 200km wie gewuenscht), auf Di/Do/Sa verteilt (nie an Folgetagen). Kraft nur 1x leicht (Erhalt).",
+      "days": {
+        "Mon": [],
+        "Tue": [{"w": "bike_long", "km": 200.0}],
+        "Wed": [{"w": "swim_long", "km": 3.0}, {"w": "run_z2", "km": 8.0}],
+        "Thu": [{"w": "bike_long", "km": 200.0}],
+        "Fri": ["swim_outdoor", "weight_max"],
+        "Sat": [{"w": "bike_long", "km": 200.0}],
+        "Sun": [{"w": "run_long", "km": 24.0}]
+      }
+    },
+    "2027-06-14": {
+      "label": "Erholungswoche nach Trainingslager",
+      "phase": "Taper",
+      "comment": "Nach der hohen Belastung im Trainingslager: deutlich reduziertes Volumen, keine Intensitaet.",
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 1.0}],
+        "Tue": ["weight_endurance", "swim_drills"],
+        "Wed": [{"w": "run_z2", "km": 7.0}],
+        "Thu": [{"w": "bike_z2", "h": 1.0}],
+        "Fri": [{"w": "swim_long", "km": 2.5}, {"w": "run_z2", "km": 6.0}],
+        "Sat": [{"w": "bike_long", "km": 70.0}],
+        "Sun": [{"w": "run_long", "km": 14.0}]
+      }
+    },
+    "2027-06-21": {
+      "label": "Taper",
+      "phase": "Taper",
+      "comment": "Volumen -50%, Renntempo-Reize beibehalten (Taper-Prinzip: Umfang runter, Reiz halten). Kein Krafttraining mehr.",
+      "days": {
+        "Mon": [{"w": "bike_z2", "h": 0.5}],
+        "Tue": ["swim_drills"],
+        "Wed": [{"w": "run_interval", "km": 6.0}, "bike_4x4"],
+        "Thu": [],
+        "Fri": [{"w": "swim_long", "km": 1.5}, {"w": "run_z2", "km": 5.0}],
+        "Sat": [{"w": "bike_long", "km": 60.0}],
+        "Sun": [{"w": "run_long", "km": 12.0}]
+      }
+    },
+    "2027-06-28": {
+      "label": "Wettkampfwoche - IRONMAN",
+      "phase": "Wettkampfwoche",
+      "comment": "Rennwoche: Mo-Mi nur kurze Aktivierung, danach Ruhe/Reise. Rennen So 4.7.27.",
+      "days": {
+        "Mon": [{"w": "bike_z2", "km": 20.0}],
+        "Tue": ["swim_drills"],
+        "Wed": [{"w": "run_z2", "km": 3.0}],
+        "Thu": [],
+        "Fri": [],
+        "Sat": [{"w": "swim_shakeout", "min": 15}],
+        "Sun": [{"w": "race", "name": "Ironman (3.8 / 180 / 42.2)", "sport": "other", "min": 780}]
+      }
+    }
+  }
+}

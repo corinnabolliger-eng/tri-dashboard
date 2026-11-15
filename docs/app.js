@@ -96,6 +96,7 @@ async function boot() {
   const saved = store.get("tri-theme");
   if (saved) document.documentElement.dataset.theme = saved;
   try { CONFIG = await getJSON("config.json"); } catch { CONFIG = {}; }
+  try { TP = await getJSON("training-plan.json"); } catch { TP = null; }
   document.title = CONFIG.title || document.title;
 
   let env = null;
@@ -231,7 +232,10 @@ function emptyWeek() {
 /* ------------------------------------------------------------------ render */
 function renderAll() {
   renderKPIs();
-  if (typeof renderPlan === "function") { if (!renderAll.planInit) { initPlanTabs(); renderAll.planInit = true; } renderPlan(); }
+  if (typeof renderCoach === "function") {
+    if (!renderAll.planInit) { initPlanTabs(); renderAll.planInit = true; }
+    try { renderCoach(); renderPlan(); } catch (e) { console.error(e); document.getElementById("coach").innerHTML = `<div class="nodata">Coach error: ${esc(e.message)}. Check training-plan.json.</div>`; }
+  }
   renderOther();
   renderSports();
   renderZones();
