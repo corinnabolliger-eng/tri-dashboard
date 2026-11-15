@@ -1,0 +1,46 @@
+name: Sync Garmin & publish dashboard
+
+on:
+  schedule:
+    - cron: "17 4 * * *"      # every day ~04:17 UTC (05:17 CET)
+  workflow_dispatch: {}        # "Run workflow" button in the Actions tab
+  push:
+    branches: [main]
+    paths: ["docs/**"]         # republish when you edit the dashboard or config
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: garmin-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -U -r requirements.txt
+
+      - name: Fetch Garmin data
+        if: github.event_name != 'push'
+        env:
+          GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
+          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+          DASHBOARD_PASSWORD: ${{ secrets.DASHBOARD_PASSWORD }}
+        run: python scripts/fetch_garmin.py
+
+      - name: Commit data
+        if: github.event_name != 'push'
+        run: |
+          git config user.name "garmin-sync-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
